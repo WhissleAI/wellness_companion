@@ -9,7 +9,7 @@ import numpy as np
 import openai
 
 # Set your OpenAI API key
-openai.api_key = 'sk-proj-wBhxVeSmc5c9wq0MccFNT3BlbkFJPnPgz351rUnyoyLziIRu'
+openai.api_key = 'OPEN_API_KEY'
 
 # Initialize FastAPI
 app = FastAPI()
