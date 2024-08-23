@@ -9,7 +9,7 @@ import numpy as np
 import openai
 
 # Set your OpenAI API key
-openai.api_key = 'OPEN_API_KEY'
+openai.api_key = 'OPENAI_API_KEY'
 
 # Initialize FastAPI
 app = FastAPI()
@@ -52,6 +52,7 @@ def query_chatbot(query: str) -> dict:
     query_embedding = model.encode([query], device='cpu')
     D, I = index.search(query_embedding, k=1)  # Search for the closest match
     result = data.iloc[I[0][0]]
+    
 
     # Create a prompt for ChatGPT to rephrase the recommendation
     prompt = (
@@ -72,11 +73,44 @@ def query_chatbot(query: str) -> dict:
         'recommendation': result['Recommendation']
     }
 
+def query_chatbot_multiple(query: str) -> dict:
+    # Get the query embedding
+    query_embedding = model.encode([query], device='cpu')
+    
+    # Search for the top 3 closest matches
+    D, I = index.search(query_embedding, k=3)
+    
+    # Gather the recommendations and YouTube links from the top 3 matches
+    recommendations = []
+    youtube_links = []
+    for i in range(3):
+        result = data.iloc[I[0][i]]
+        recommendations.append(result['Recommendation'])
+        youtube_links.append(result['LINK'])
+    
+    # Combine all recommendations into a single prompt
+    combined_recommendations = "\n\n".join(recommendations)
+    prompt = (
+        f"You asked: {query}\n\n"
+        f"Here are some situations related to your query:\n\n"
+        f"{combined_recommendations}\n\n"
+        f"Please rephrase the above recommendations to make them more engaging and concise."
+    )
+    
+    # Generate the ChatGPT response
+    chatgpt_response = generate_chatgpt_response(prompt)
+    
+    return {
+        'chatgpt_response': chatgpt_response,
+        'youtube_links': youtube_links
+    }
+    
 # FastAPI route to handle POST requests with user queries
 @app.post("/query/")
 async def handle_query(request: QueryRequest):
     try:
-        response = query_chatbot(request.query)
+        response = query_chatbot_multiple(request.query)
+        print(response)
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
