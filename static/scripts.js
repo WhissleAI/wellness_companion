@@ -15,13 +15,23 @@ document.getElementById("send-btn").addEventListener("click", function() {
     })
     .then(response => response.json())
     .then(data => {
-        // Display the bot's response in the chat box, excluding the YouTube link
-        const cleanedResponse = data.chatgpt_response.replace(/https?:\/\/[^\s]+/, '');
+        // Display the bot's response in the chat box, excluding the YouTube links
+        const cleanedResponse = data.chatgpt_response.replace(/https?:\/\/[^\s]+/g, '');
         displayMessage(cleanedResponse, "bot-message");
 
-        // Embed the YouTube video
-        embedYouTubeVideo(data.youtube_link);
-    });
+        // Clear the video container before adding new videos
+        clearVideoContainer();
+
+        // Embed all YouTube videos below the chat box, if available
+        if (data.youtube_links && data.youtube_links.length > 0) {
+            data.youtube_links.forEach(link => {
+                embedYouTubeVideos(link);
+            });
+        } else {
+            console.error("No YouTube links found in the response.");
+        }
+    })
+    .catch(error => console.error("Error:", error));
 
     // Clear the input field
     document.getElementById("user-input").value = "";
@@ -31,16 +41,33 @@ function displayMessage(message, className) {
     const chatBox = document.getElementById("chat-box");
     const messageDiv = document.createElement("div");
     messageDiv.className = `message ${className}`;
-    messageDiv.innerHTML = message;
+    
+    const icon = document.createElement("i");
+    icon.className = `icon ${className === "user-message" ? "fas fa-user" : "fas fa-robot"}`;
+    
+    const messageContent = document.createElement("div");
+    messageContent.className = "message-content";
+    messageContent.innerHTML = message;
+    
+    messageDiv.appendChild(icon);
+    messageDiv.appendChild(messageContent);
     chatBox.appendChild(messageDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-function embedYouTubeVideo(youtubeLink) {
+function embedYouTubeVideos(link) {
     const videoContainer = document.getElementById("video-container");
-    const videoId = youtubeLink.split("v=")[1];
-    if (videoId) {
-        const embedUrl = `https://www.youtube.com/embed/${videoId}`;
-        videoContainer.innerHTML = `<iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-    }
+    const iframe = document.createElement("iframe");
+    iframe.className = "youtube-video";
+    iframe.src = link.replace("watch?v=", "embed/");
+    iframe.width = "300";  // Adjust width
+    iframe.height = "169"; // Adjust height to maintain 16:9 aspect ratio
+    iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+    iframe.allowFullscreen = true;
+    videoContainer.appendChild(iframe);
+}
+
+function clearVideoContainer() {
+    const videoContainer = document.getElementById("video-container");
+    videoContainer.innerHTML = "";  // Clear existing videos
 }
